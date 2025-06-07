@@ -1,5 +1,7 @@
 .App {
   text-align: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
 }
 
 .App-logo {
@@ -15,13 +17,14 @@
 
 .App-header {
   background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  padding: 2rem;
   color: white;
+  margin-bottom: 2rem;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5rem;
 }
 
 .App-link {
@@ -86,4 +89,10 @@
 .click-me-btn:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(136, 192, 208, 0.5);
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
 }

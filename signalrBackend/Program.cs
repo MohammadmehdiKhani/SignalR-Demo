@@ -2,7 +2,6 @@ using signalrBackend.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
@@ -21,7 +20,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -29,14 +27,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors();
+app.UseCors("AllowAll");
 app.UseAuthorization();
+app.MapHub<CounterHub>("/clientCounterHub");
+app.MapHub<VotingHub>("/votingHub");
 app.MapControllers();
-app.MapHub<CounterHub>("/counterhub");
 
 app.Run();
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-

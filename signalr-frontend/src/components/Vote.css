@@ -1,0 +1,128 @@
+.vote-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.vote-container h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 2.5rem;
+}
+
+.vote-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.vote-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.fighter-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.fighter-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #007bff;
+}
+
+.vote-button {
+    padding: 1rem;
+    font-size: 1.1rem;
+    border: 2px solid #007bff;
+    background-color: white;
+    color: #007bff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.vote-button:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.vote-button.selected {
+    background-color: #007bff;
+    color: white;
+}
+
+.vote-result {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.vote-bar {
+    flex: 1;
+    height: 20px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.vote-fill {
+    height: 100%;
+    background-color: #007bff;
+    transition: width 0.3s ease;
+}
+
+.vote-percentage {
+    min-width: 60px;
+    text-align: right;
+    color: #666;
+    font-weight: bold;
+}
+
+.total-votes {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    color: #666;
+    font-weight: bold;
+}
+
+.connection-status {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.connected {
+    background-color: #28a745;
+}
+
+.status-dot.disconnected {
+    background-color: #dc3545;
+}
+
+.status-dot.connecting {
+    background-color: #ffc107;
+} 
