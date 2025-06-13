@@ -1,29 +1,26 @@
 using Microsoft.AspNetCore.SignalR;
+using signalrBackend.Services;
 
 namespace signalrBackend.Hubs
 {
     public class VotingHub : Hub
     {
-        private static Dictionary<string, int> _votes = new Dictionary<string, int>
+        private static VotingService _votingService;
+        public VotingHub(VotingService votingService)
         {
-            { "Islam", 0 },
-            { "Khabib", 0 },
-            { "Ferguson", 0 }
-        };
+            _votingService = votingService;
+        }
 
         public override async Task OnConnectedAsync()
         {
-            await Clients.All.SendAsync("ReceiveVoteResults", _votes);
+            await Clients.All.SendAsync("ReceiveVoteResults", _votingService.GetVotingResults());
             await base.OnConnectedAsync();
         }
 
         public async Task SubmitVote(string fighter)
         {
-            if (_votes.ContainsKey(fighter))
-            {
-                _votes[fighter]++;
-                await Clients.All.SendAsync("ReceiveVoteResults", _votes);
-            }
+            _votingService.AddVote(fighter);
+            await Clients.All.SendAsync("ReceiveVoteResults", _votingService.GetVotingResults());
         }
     }
 } 

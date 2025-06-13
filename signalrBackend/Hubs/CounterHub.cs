@@ -11,6 +11,7 @@ namespace signalrBackend.Hubs
         {
             _liveConnectionCounter++;
             await Clients.All.SendAsync("UpdateLiveClientCounter", _liveConnectionCounter);
+            await Clients.Caller.SendAsync("UpdateClickCounter", _clickCounter);
             await base.OnConnectedAsync();
         }
 

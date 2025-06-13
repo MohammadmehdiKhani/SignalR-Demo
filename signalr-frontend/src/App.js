@@ -4,6 +4,7 @@ import './App.css';
 import Navbar from './components/Navbar';
 import ClientCounter from './components/ClientCounter';
 import Vote from './components/Vote';
+import Race from './components/Race';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Routes>
             <Route path="/" element={<ClientCounter />} />
             <Route path="/vote" element={<Vote />} />
+            <Route path="/race" element={<Race />} />
           </Routes>
         </main>
       </div>

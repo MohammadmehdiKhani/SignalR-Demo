@@ -24,6 +24,7 @@ const Vote = () => {
     const [totalVotes, setTotalVotes] = useState(0);
     const [connectionStatus, setConnectionStatus] = useState("Disconnected");
 
+    // Initialize SignalR connection
     useEffect(() => {
         const newConnection = new HubConnectionBuilder()
             .withUrl('http://localhost:5050/votingHub', {
@@ -36,6 +37,7 @@ const Vote = () => {
         setConnection(newConnection);
     }, []);
 
+    // Handle SignalR connection and events
     useEffect(() => {
         if (connection) {
             setConnectionStatus("Connecting");
@@ -49,7 +51,9 @@ const Vote = () => {
                     setConnectionStatus("Disconnected");
                 });
 
+            // Listen for vote updates
             connection.on('ReceiveVoteResults', (results) => {
+                console.log('Received new vote results:', results);
                 setVotes(results);
                 const total = Object.values(results).reduce((a, b) => a + b, 0);
                 setTotalVotes(total);
@@ -63,14 +67,50 @@ const Vote = () => {
         };
     }, [connection]);
 
-    const handleVote = async (fighter) => {
-        if (connection) {
-            try {
-                await connection.invoke('SubmitVote', fighter);
-                setSelectedFighter(fighter);
-            } catch (err) {
-                console.error('Error submitting vote:', err);
+    // Fetch initial votes
+    useEffect(() => {
+        fetchVotes();
+    }, []);
+
+    const fetchVotes = async () => {
+        try {
+            const response = await fetch('http://localhost:5050/api/voting');
+            if (!response.ok) {
+                throw new Error('Failed to fetch votes');
             }
+            const results = await response.json();
+            setVotes(results);
+            const total = Object.values(results).reduce((a, b) => a + b, 0);
+            setTotalVotes(total);
+        } catch (err) {
+            console.error('Error fetching votes:', err);
+        }
+    };
+
+    const handleVote = async (fighter) => {
+        try {
+            console.log('Sending vote for:', fighter);
+            const response = await fetch('http://localhost:5050/api/voting', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(fighter)
+            });
+
+            console.log('Response status:', response.status);
+            const responseText = await response.text();
+            console.log('Response text:', responseText);
+
+            if (!response.ok) {
+                throw new Error(`Failed to submit vote: ${responseText}`);
+            }
+
+            console.log('Vote submitted successfully:', responseText);
+            setSelectedFighter(fighter);
+        } catch (err) {
+            console.error('Error submitting vote:', err);
+            alert(`Failed to submit vote: ${err.message}`);
         }
     };
 
