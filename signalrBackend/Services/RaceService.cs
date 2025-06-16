@@ -28,38 +28,37 @@ namespace signalrBackend.Services
         {
             var random = new Random();
             CurrentText = _sampleTexts[random.Next(_sampleTexts.Length)];
-            Player.TotalCharacters = CurrentText.Length;
         }
 
-        public void AddPlayer(string username)
+        public void AddPlayer(string connectionId, string username)
         {
-            if (!_players.ContainsKey(username))
+            if (!_players.ContainsKey(connectionId))
             {
-                _players.Add(username, new Player { Username = username });
+                _players.Add(connectionId, new Player { ConnectionId = connectionId, Username = username });
             }
         }
 
-        public void RemovePlayer(string username)
+        public void RemovePlayer(string connectionId)
         {
-            _players.Remove(username);
+            _players.Remove(connectionId);
         }
 
-        public void SetPlayerReady(string username)
+        public void SetPlayerReady(string connectionId)
         {
-            if (_players.TryGetValue(username, out var player))
+            if (_players.TryGetValue(connectionId, out var player))
             {
                 player.IsReady = true;
             }
         }
 
-        public void UpdatePlayerProgress(string username, double progress)
+        public void UpdatePlayerProgress(string connectionId, double progress)
         {
-            if (_players.TryGetValue(username, out var player))
+            if (_players.TryGetValue(connectionId, out var player))
             {
                 player.Progress = progress;
-                if (progress >= 100 && !_ranking.Contains(username))
+                if (progress >= 100 && !_ranking.Contains(connectionId))
                 {
-                    _ranking.Add(username);
+                    _ranking.Add(connectionId);
                 }
             }
         }
@@ -88,11 +87,13 @@ namespace signalrBackend.Services
             SetNewText();
         }
 
-        public IEnumerable<Player> GetPlayers()
+        public List<Player> GetPlayers()
         {
-            return _players.Values;
+            return _players.Values.ToList();
         }
 
         public IEnumerable<string> GetRanking() => _ranking;
+
+        public IEnumerable<Player> GetRankingPlayers() => _ranking.Select(cid => _players.ContainsKey(cid) ? _players[cid] : null).Where(p => p != null);
     }
 } 

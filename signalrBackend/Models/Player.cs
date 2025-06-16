@@ -5,6 +5,6 @@ namespace signalrBackend.Models
         public string Username { get; set; }
         public bool IsReady { get; set; }
         public double Progress { get; set; }
-        public static int TotalCharacters { get; set; }
+        public string ConnectionId { get; set; }
     }
 } 
