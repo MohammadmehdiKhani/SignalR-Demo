@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { signalRService } from '../services/signalRService';
+import signalRService from '../services/signalRService';
 import './Race.css';
 
 const Race = () => {
@@ -16,14 +16,20 @@ const Race = () => {
     const [ranking, setRanking] = useState([]);
 
     useEffect(() => {
+        let mounted = true;
+        let retryTimeout;
+
         const setupConnection = async () => {
             try {
                 await signalRService.startConnection();
+                if (!mounted) return;
+
                 setConnectionStatus('connected');
                 setError(null);
 
                 // Add event handlers
                 signalRService.addHandler('ReceiveProgress', (playerId, progress) => {
+                    if (!mounted) return;
                     console.log('Progress received:', playerId, progress);
                     setPlayerProgress(prev => ({
                         ...prev,
@@ -32,10 +38,18 @@ const Race = () => {
                 });
 
                 signalRService.addHandler('PlayerJoined', (player) => {
+                    if (!mounted) return;
                     console.log('Player joined:', player);
-                    setPlayers(prev => [...prev, player]);
-                    if ((player.name && player.name === username) || (player.username && player.username === username)) {
-                        setConnectionId(player.id);
+                    setPlayers(prev => {
+                        const existingPlayer = prev.find(p => p.id === player.id);
+                        if (existingPlayer) {
+                            return prev.map(p => p.id === player.id ? { ...p, ...player } : p);
+                        }
+                        return [...prev, { ...player, id: player.id || player.connectionId }];
+                    });
+                    if (player.username === username) {
+                        setConnectionId(player.id || player.connectionId);
+                        console.log('Connection ID set:', player.id || player.connectionId);
                     }
                 });
 
@@ -49,49 +63,68 @@ const Race = () => {
                     });
                 });
 
-                signalRService.addHandler('RaceStarted', (raceText) => {
-                    console.log('Race started with text:', raceText);
-                    setText(raceText);
+                signalRService.addHandler('RaceStarted', (text) => {
+                    console.log('Race started with text:', text);
+                    setText(text);
                     setIsRacing(true);
-                    setCountdown(null);
-                });
-
-                signalRService.addHandler('RaceEnded', (results) => {
-                    console.log('Race ended with results:', results);
-                    setIsRacing(false);
-                    setText('');
                     setInput('');
                     setPlayerProgress({});
                 });
 
-                signalRService.addHandler('Countdown', (number) => {
-                    console.log('Countdown:', number);
-                    setCountdown(number);
+                signalRService.addHandler('RaceEnded', () => {
+                    console.log('Race ended');
+                    setIsRacing(false);
+                    setInput('');
+                    setText('');
+                    setPlayerProgress({});
+                });
+
+                signalRService.addHandler('Countdown', (count) => {
+                    console.log('Countdown:', count);
+                    if (count === 0) {
+                        setCountdown(null);
+                    } else {
+                        setCountdown(count);
+                    }
                 });
 
                 signalRService.addHandler('AllPlayersReady', () => {
                     console.log('All players are ready');
+                    setCountdown(3);
                 });
 
-                signalRService.addHandler('UpdatePlayers', (players) => {
-                    console.log('UpdatePlayers:', players);
-                    setPlayers(players);
+                signalRService.addHandler('UpdatePlayers', (playersList) => {
+                    console.log('UpdatePlayers:', playersList);
+                    setPlayers(playersList.map(player => ({
+                        ...player,
+                        id: player.id || player.connectionId
+                    })));
                 });
 
-                signalRService.addHandler('RankingUpdated', (rankingList) => {
-                    setRanking(rankingList);
+                signalRService.addHandler('RankingUpdated', (rankingPlayers) => {
+                    console.log('Ranking updated:', rankingPlayers);
+                    const usernames = rankingPlayers.map(player => player.username || 'Unknown Player');
+                    setRanking(usernames);
                 });
 
             } catch (err) {
+                if (!mounted) return;
                 console.error('Failed to start connection:', err);
                 setConnectionStatus('disconnected');
                 setError('Failed to connect to the server');
+
+                // Retry connection after delay
+                retryTimeout = setTimeout(setupConnection, 2000);
             }
         };
 
         setupConnection();
 
         return () => {
+            mounted = false;
+            if (retryTimeout) {
+                clearTimeout(retryTimeout);
+            }
             signalRService.stopConnection();
         };
     }, []);
@@ -144,7 +177,7 @@ const Race = () => {
                     }
                 }
                 const percent = text.length > 0 ? (correct / text.length) * 100 : 0;
-                signalRService.invoke('SendProgress', percent);
+                signalRService.sendProgress(percent);
             }
         } else if (value.length < input.length) {
             const newInput = input.slice(0, value.length);
@@ -158,7 +191,7 @@ const Race = () => {
                 }
             }
             const percent = text.length > 0 ? (correct / text.length) * 100 : 0;
-            signalRService.invoke('SendProgress', percent);
+            signalRService.sendProgress(percent);
         }
     };
 
@@ -179,11 +212,14 @@ const Race = () => {
 
     const getRandomColor = (id) => {
         const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c'];
-        return colors[id.charCodeAt(0) % colors.length];
+        const safeId = id || '0';
+        return colors[safeId.charCodeAt(0) % colors.length];
     };
 
     // تابع محاسبه درصد پیشرفت بر اساس تعداد کاراکتر صحیح و طول متن مسابقه
     const getProgressPercent = (playerId) => {
+        if (!playerId) return 0;
+        
         if (playerId === connectionId) {
             let correct = 0;
             for (let i = 0; i < input.length && i < text.length; i++) {
@@ -195,11 +231,7 @@ const Race = () => {
             }
             return text.length > 0 ? (correct / text.length) * 100 : 0;
         } else {
-            if (playerProgress[playerId] !== undefined) {
-                return playerProgress[playerId];
-            }
-            const player = players.find(p => p.id === playerId);
-            return player ? player.progress || 0 : 0;
+            return playerProgress[playerId] || 0;
         }
     };
 
@@ -283,16 +315,22 @@ const Race = () => {
                         <div className="race-track">
                             <div className="finish-line"></div>
                             {players.map(player => {
-                                const percent = getProgressPercent(player.id);
-                                console.log('player:', player.username, 'id:', player.id, 'percent:', percent, 'left:', `calc(${percent}% -  ${120 * percent / 100}px)`);
+                                const playerId = player.id || player.connectionId;
+                                const percent = getProgressPercent(playerId);
+                                console.log('Player progress:', {
+                                    username: player.username,
+                                    id: playerId,
+                                    percent: percent,
+                                    connectionId: connectionId
+                                });
                                 return (
                                     <div
-                                        key={player.id}
-                                        className={`car ${playerProgress[player.id] > 0 ? 'moving' : ''}`}
+                                        key={playerId}
+                                        className={`car ${playerProgress[playerId] > 0 ? 'moving' : ''}`}
                                         style={{
-                                            left: `calc(${percent}% -  ${120 * percent / 100}px)`,
+                                            left: `calc(${percent}% - ${120 * percent / 100}px)`,
                                             top: `${players.indexOf(player) * 80 + 60}px`,
-                                            color: getRandomColor(player.id)
+                                            color: getRandomColor(playerId)
                                         }}
                                         data-name={player.username}
                                     />
