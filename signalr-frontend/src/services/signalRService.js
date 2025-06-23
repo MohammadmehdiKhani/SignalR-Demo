@@ -1,66 +1,195 @@
 import * as signalR from '@microsoft/signalr';
+import authService from './authService';
 
 class SignalRService {
     constructor() {
-        this.baseUrl = 'http://localhost:5050';
-        this.connection = null;
-        this.handlers = new Map();
+        this.connections = new Map();
+        this.pendingHandlers = new Map();
+        this.isConnected = false;
     }
 
-    async startConnection() {
-        if (this.connection) {
-            return;
-        }
-
-        this.connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${this.baseUrl}/raceHub`, {
-                skipNegotiation: true,
-                transport: signalR.HttpTransportType.WebSockets
-            })
-            .build();
-
+    async startConnection(hubName) {
         try {
-            console.log('Attempting to connect to:', `${this.baseUrl}/raceHub`);
-            await this.connection.start();
-            console.log('SignalR Connected successfully');
+            if (this.connections.has(hubName)) {
+                await this.connections.get(hubName).stop();
+            }
+
+            const token = authService.getToken();
+            if (!token) {
+                throw new Error('No authentication token available');
+            }
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl(`http://localhost:5050/${hubName}?access_token=${token}`, {
+                    skipNegotiation: false,
+                    transport: signalR.HttpTransportType.WebSockets,
+                    withCredentials: true
+                })
+                .withAutomaticReconnect([0, 2000, 5000, 10000, 20000])
+                .configureLogging(signalR.LogLevel.Debug)
+                .build();
+
+            // Add connection event handlers
+            connection.onclose(async () => {
+                console.log(`${hubName} connection closed`);
+                this.isConnected = false;
+                // Try to reconnect after a delay
+                setTimeout(() => this.startConnection(hubName), 5000);
+            });
+
+            connection.onreconnecting((error) => {
+                console.log(`${hubName} reconnecting...`, error);
+                this.isConnected = false;
+            });
+
+            connection.onreconnected((connectionId) => {
+                console.log(`${hubName} reconnected. ConnectionId:`, connectionId);
+                this.isConnected = true;
+            });
+
+            await connection.start();
+            console.log(`${hubName} SignalR Connected successfully`);
+            this.isConnected = true;
+            this.connections.set(hubName, connection);
+
         } catch (error) {
-            console.error('Error creating connection:', error);
-            this.connection = null;
+            console.error(`${hubName} SignalR Connection Error: `, error);
+            this.isConnected = false;
             throw error;
         }
     }
 
-    async stopConnection() {
-        if (this.connection) {
-            try {
-                await this.connection.stop();
-            } catch (error) {
-                console.error('Error stopping connection:', error);
+    async stopConnection(hubName) {
+        if (this.connections.has(hubName)) {
+            await this.connections.get(hubName).stop();
+            this.connections.delete(hubName);
+            this.isConnected = false;
+        }
+    }
+
+    async stopAllConnections() {
+        for (const [hubName, connection] of this.connections) {
+            await connection.stop();
+        }
+        this.connections.clear();
+        this.isConnected = false;
+    }
+
+    addHandler(hubName, methodName, handler) {
+        const connection = this.connections.get(hubName);
+        if (connection && this.isConnected) {
+            connection.on(methodName, handler);
+        } else {
+            if (!this.pendingHandlers.has(hubName)) {
+                this.pendingHandlers.set(hubName, new Map());
             }
-            this.connection = null;
+            this.pendingHandlers.get(hubName).set(methodName, handler);
         }
     }
 
-    addHandler(methodName, handler) {
-        if (this.connection) {
-            this.connection.on(methodName, handler);
-            this.handlers.set(methodName, handler);
+    removeHandler(hubName, methodName, handler) {
+        const connection = this.connections.get(hubName);
+        if (connection) {
+            connection.off(methodName, handler);
+        }
+        
+        const hubHandlers = this.pendingHandlers.get(hubName);
+        if (hubHandlers) {
+            hubHandlers.delete(methodName);
         }
     }
 
-    async invoke(methodName, ...args) {
-        if (!this.connection) {
-            throw new Error('No connection available');
+    async invoke(hubName, methodName, ...args) {
+        const connection = this.connections.get(hubName);
+        if (!this.isConnected || !connection) {
+            throw new Error(`${hubName} SignalR connection is not established`);
         }
-        return await this.connection.invoke(methodName, ...args);
+        return await connection.invoke(methodName, ...args);
     }
 
-    async sendProgress(progress) {
-        if (!this.connection) {
-            throw new Error('No connection available');
+    // Race Hub specific methods - Updated for Room system
+    async createRoom(roomId) {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
         }
-        await this.connection.invoke('SendProgress', progress);
+        // For now, we'll use joinRoom for both create and join since the backend handles room creation automatically
+        await connection.invoke('JoinRoom', roomId);
+    }
+
+    async joinRoom(roomId) {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
+        }
+        await connection.invoke('JoinRoom', roomId);
+    }
+
+    async leaveRoom(roomId) {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
+        }
+        await connection.invoke('LeaveRoom', roomId);
+    }
+
+    async getActiveRooms() {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
+        }
+        await connection.invoke('GetActiveRooms');
+    }
+
+    async getRoomInfo(roomId) {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
+        }
+        await connection.invoke('GetRoomInfo', roomId);
+    }
+
+    async setReady(roomId) {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
+        }
+        await connection.invoke('SetReady', roomId);
+    }
+
+    async sendProgress(roomId, correctCharacters) {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
+        }
+        await connection.invoke('SendProgress', roomId, correctCharacters);
+    }
+
+    async endRace(roomId) {
+        const connection = this.connections.get('raceHub');
+        if (!connection) {
+            throw new Error('Not connected to Race Hub');
+        }
+        await connection.invoke('EndRace', roomId);
+    }
+
+    // Counter Hub specific methods
+    async incrementCounter() {
+        const connection = this.connections.get('clientCounterHub');
+        if (!connection) {
+            throw new Error('Not connected to Counter Hub');
+        }
+        await connection.invoke('IncrementCounter');
+    }
+
+    // Voting Hub specific methods
+    async vote(playerId) {
+        const connection = this.connections.get('votingHub');
+        if (!connection) {
+            throw new Error('Not connected to Voting Hub');
+        }
+        await connection.invoke('Vote', playerId);
     }
 }
 
-export default new SignalRService(); 
+export const signalRService = new SignalRService(); 

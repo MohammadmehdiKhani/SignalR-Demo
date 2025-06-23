@@ -1,60 +1,46 @@
 import { useEffect, useState } from "react";
-import * as signalR from "@microsoft/signalr";
+import { signalRService } from "../services/signalRService";
 import "./ClientCounter.css";
 
 const ClientCounter = () => {
   const [counter, setCounter] = useState(0);
   const [clickCounter, setClickCounter] = useState(0);
-  const [connection, setConnection] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("Disconnected");
 
   useEffect(() => {
-    const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5050/clientCounterHub", {
-        skipNegotiation: true,
-        transport: signalR.HttpTransportType.WebSockets
-      })
-      .withAutomaticReconnect()
-      .build();
+    const startConnection = async () => {
+      try {
+        setConnectionStatus("Connecting");
+        await signalRService.startConnection("clientCounterHub");
+        setConnectionStatus("Connected");
 
-    setConnection(newConnection);
-  }, []);
-
-  useEffect(() => {
-    if (connection) {
-      setConnectionStatus("Connecting");
-      connection
-        .start()
-        .then(() => {
-          console.log("Connected to SignalR Hub");
-          setConnectionStatus("Connected");
-        })
-        .catch((err) => {
-          console.error("SignalR Connection Error: ", err);
-          setConnectionStatus("Disconnected");
+        // Add handlers
+        signalRService.addHandler("clientCounterHub", "UpdateLiveClientCounter", (count) => {
+          setCounter(count);
         });
 
-      connection.on("UpdateLiveClientCounter", (count) => {
-        setCounter(count);
-      });
+        signalRService.addHandler("clientCounterHub", "UpdateClickCounter", (count) => {
+          setClickCounter(count);
+        });
 
-      connection.on("UpdateClickCounter", (count) => {
-        setClickCounter(count);
-      });
+      } catch (error) {
+        console.error("SignalR Connection Error: ", error);
+        setConnectionStatus("Disconnected");
+      }
+    };
 
-      return () => {
-        connection.stop();
-      };
-    }
-  }, [connection]);
+    startConnection();
+
+    return () => {
+      signalRService.stopConnection("clientCounterHub");
+    };
+  }, []);
 
   const handleClick = async () => {
-    if (connection) {
-      try {
-        await connection.invoke("SomebodyClicked");
-      } catch (error) {
-        console.error("Error calling somebodyClicked:", error);
-      }
+    try {
+      await signalRService.invoke("clientCounterHub", "SomebodyClicked");
+    } catch (error) {
+      console.error("Error calling somebodyClicked:", error);
     }
   };
 

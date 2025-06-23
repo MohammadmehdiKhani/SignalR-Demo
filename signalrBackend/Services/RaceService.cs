@@ -68,6 +68,11 @@ namespace signalrBackend.Services
             return _players.Count > 0 && _players.Values.All(p => p.IsReady);
         }
 
+        public bool AreAllPlayersFinished()
+        {
+            return _players.Count > 0 && _players.Values.All(p => p.Progress >= 100);
+        }
+
         public void StartRace()
         {
             IsRaceStarted = true;

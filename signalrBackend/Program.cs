@@ -1,12 +1,52 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using signalrBackend.Hubs;
 using signalrBackend.Services;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<VotingService>();
-builder.Services.AddSingleton<RaceService>();
+builder.Services.AddSingleton<RoomManager>();
+builder.Services.AddSingleton<AuthService>();
+
+// Configure JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "SignalRApp",
+            ValidAudience = "SignalRUsers",
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes("YourSuperSecretKey123!@#$%^&*()_+"))
+        };
+
+        // Configure SignalR to use JWT
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                
+                if (!string.IsNullOrEmpty(accessToken) && 
+                    (path.StartsWithSegments("/clientCounterHub") ||
+                    path.StartsWithSegments("/votingHub") ||
+                    path.StartsWithSegments("/raceHub")))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -38,6 +78,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Map SignalR hubs
@@ -47,4 +88,4 @@ app.MapHub<RaceHub>("/raceHub");
 
 app.MapControllers();
 
-app.Run();
+app.Run(); 
