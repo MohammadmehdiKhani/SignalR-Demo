@@ -23,7 +23,7 @@ namespace signalrBackend.Controllers
                 return BadRequest(new AuthResponse
                 {
                     Success = false,
-                    Message = "نام کاربری و رمز عبور الزامی است"
+                    Message = "Username and password are required"
                 });
             }
 
@@ -45,7 +45,7 @@ namespace signalrBackend.Controllers
                 return BadRequest(new AuthResponse
                 {
                     Success = false,
-                    Message = "نام کاربری و رمز عبور الزامی است"
+                    Message = "Username and password are required"
                 });
             }
 
@@ -64,7 +64,7 @@ namespace signalrBackend.Controllers
         {
             if (string.IsNullOrEmpty(token))
             {
-                return BadRequest(new { Success = false, Message = "توکن الزامی است" });
+                return BadRequest(new { Success = false, Message = "Token is required" });
             }
 
             var isValid = _authService.ValidateToken(token);
@@ -75,7 +75,7 @@ namespace signalrBackend.Controllers
                 return Ok(new { Success = true, Username = username });
             }
             
-            return BadRequest(new { Success = false, Message = "توکن نامعتبر است" });
+            return BadRequest(new { Success = false, Message = "Invalid token" });
         }
     }
 } 

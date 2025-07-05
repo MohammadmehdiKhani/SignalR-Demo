@@ -477,7 +477,7 @@ const Race = () => {
                 <div className="countdown">{countdown}</div>
             )}
 
-            {text && (
+            {isRacing && text && (
                 <div className="race-text" style={{ textAlign: 'center', marginBottom: '10px', fontWeight: 'bold', fontSize: '18px' }}>
                     {text}
                 </div>

@@ -8,7 +8,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<VotingService>();
 builder.Services.AddSingleton<RoomManager>();
 builder.Services.AddSingleton<AuthService>();
 
@@ -37,9 +36,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var path = context.HttpContext.Request.Path;
                 
                 if (!string.IsNullOrEmpty(accessToken) && 
-                    (path.StartsWithSegments("/clientCounterHub") ||
-                    path.StartsWithSegments("/votingHub") ||
-                    path.StartsWithSegments("/raceHub")))
+                    (path.StartsWithSegments("/raceHub")))
                 {
                     context.Token = accessToken;
                 }
@@ -82,8 +79,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Map SignalR hubs
-app.MapHub<CounterHub>("/clientCounterHub");
-app.MapHub<VotingHub>("/votingHub");
 app.MapHub<RaceHub>("/raceHub");
 
 app.MapControllers();

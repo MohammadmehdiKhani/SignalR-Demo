@@ -1,19 +1,15 @@
 using signalrBackend.Models;
+using System.IO;
 
 namespace signalrBackend.Services
 {
     public class RaceService
     {
         private readonly Dictionary<string, Player> _players = new();
-        private readonly string[] _sampleTexts = new[]
-        {
-            "The quick brown fox jumps over the lazy dog.",
-            "Programming is the art of telling another human what one wants the computer to do.",
-            "The best way to predict the future is to implement it yourself.",
-            "Code is like humor. When you have to explain it, it's bad.",
-            "Sometimes it pays to stay in bed on Monday, rather than spending the rest of the week debugging Monday's code."
-        };
         private readonly List<string> _ranking = new();
+        private static readonly string SentencesFilePath = Path.Combine(Directory.GetCurrentDirectory(), "sentences.txt");
+        private static List<string> _sentences;
+        private static readonly object _sentencesLock = new object();
 
         public string CurrentText { get; private set; }
         public bool IsRaceStarted { get; private set; }
@@ -21,13 +17,22 @@ namespace signalrBackend.Services
 
         public RaceService()
         {
+            EnsureSentencesLoaded();
             SetNewText();
         }
 
         public void SetNewText()
         {
-            var random = new Random();
-            CurrentText = _sampleTexts[random.Next(_sampleTexts.Length)];
+            EnsureSentencesLoaded();
+            if (_sentences != null && _sentences.Count > 0)
+            {
+                var rnd = new Random();
+                CurrentText = _sentences[rnd.Next(_sentences.Count)].Trim();
+            }
+            else
+            {
+                CurrentText = "No sentences available. Please add sentences to sentences.txt.";
+            }
         }
 
         public void AddPlayer(string connectionId, string username)
@@ -100,5 +105,28 @@ namespace signalrBackend.Services
         public IEnumerable<string> GetRanking() => _ranking;
 
         public IEnumerable<Player> GetRankingPlayers() => _ranking.Select(cid => _players.ContainsKey(cid) ? _players[cid] : null).Where(p => p != null);
+
+        private void EnsureSentencesLoaded()
+        {
+            if (_sentences == null)
+            {
+                lock (_sentencesLock)
+                {
+                    if (_sentences == null)
+                    {
+                        if (File.Exists(SentencesFilePath))
+                        {
+                            _sentences = File.ReadAllLines(SentencesFilePath)
+                                .Where(line => !string.IsNullOrWhiteSpace(line))
+                                .ToList();
+                        }
+                        else
+                        {
+                            _sentences = new List<string>();
+                        }
+                    }
+                }
+            }
+        }
     }
 } 

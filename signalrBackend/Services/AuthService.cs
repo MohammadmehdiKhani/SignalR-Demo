@@ -21,7 +21,7 @@ namespace signalrBackend.Services
                 return new AuthResponse
                 {
                     Success = false,
-                    Message = "کاربر با این نام کاربری قبلاً وجود دارد"
+                    Message = "User with this username already exists"
                 };
             }
 
@@ -42,7 +42,7 @@ namespace signalrBackend.Services
                 Success = true,
                 Token = token,
                 Username = user.Username,
-                Message = "ثبت‌نام با موفقیت انجام شد"
+                Message = "Registration successful"
             };
         }
 
@@ -57,7 +57,7 @@ namespace signalrBackend.Services
                 return new AuthResponse
                 {
                     Success = false,
-                    Message = "نام کاربری یا رمز عبور اشتباه است"
+                    Message = "Wrong username or password"
                 };
             }
 
@@ -69,7 +69,7 @@ namespace signalrBackend.Services
                 Success = true,
                 Token = token,
                 Username = user.Username,
-                Message = "ورود با موفقیت انجام شد"
+                Message = "Login successful"
             };
         }
 

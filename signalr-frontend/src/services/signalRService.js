@@ -172,24 +172,6 @@ class SignalRService {
         }
         await connection.invoke('EndRace', roomId);
     }
-
-    // Counter Hub specific methods
-    async incrementCounter() {
-        const connection = this.connections.get('clientCounterHub');
-        if (!connection) {
-            throw new Error('Not connected to Counter Hub');
-        }
-        await connection.invoke('IncrementCounter');
-    }
-
-    // Voting Hub specific methods
-    async vote(playerId) {
-        const connection = this.connections.get('votingHub');
-        if (!connection) {
-            throw new Error('Not connected to Voting Hub');
-        }
-        await connection.invoke('Vote', playerId);
-    }
 }
 
 export const signalRService = new SignalRService(); 

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Navbar from './components/Navbar';
-import ClientCounter from './components/ClientCounter';
-import Vote from './components/Vote';
 import Race from './components/Race';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -84,8 +82,7 @@ function App() {
         <Navbar onLogout={handleLogout} username={authService.getUsername()} />
         <main>
           <Routes>
-            <Route path="/" element={<ClientCounter />} />
-            <Route path="/vote" element={<Vote />} />
+            <Route path="/" element={<Race />} />
             <Route path="/race" element={<Race />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

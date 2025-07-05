@@ -9,8 +9,6 @@ const Navbar = ({ onLogout, username }) => {
                 <Link to="/">SignalR Demo</Link>
             </div>
             <div className="navbar-links">
-                <Link to="/" className="nav-link">Client Counter</Link>
-                <Link to="/vote" className="nav-link">Voting</Link>
                 <Link to="/race" className="nav-link">Typing Race</Link>
             </div>
             <div className="navbar-user">
